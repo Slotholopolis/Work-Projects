@@ -1,0 +1,82 @@
+import pyodbc as odbc
+import csv
+import os
+import datetime
+import pathlib
+
+today = datetime.date.today()
+delta = datetime.timedelta(21)
+start_of_week = today - delta
+
+year = today.strftime('20%y')
+month = today.strftime("%B")
+format_start = start_of_week.strftime('%m.%d.%y')
+format_end = today.strftime('%m.%d.%y')
+
+folder_path_y = pathlib.Path(f"C:/Users/appnet/Documents/SQL Project/{year}").mkdir(parents=True, exist_ok=True)
+folder_path_m = pathlib.Path(f"C:/Users/appnet/Documents/SQL Project/{year}/{month}").mkdir(parents=True, exist_ok=True)
+file_name = f"C:/Users/appnet/Documents/SQL Project/{year}/{month}/{format_start} to {format_end} report.txt"
+
+query = """
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+SET QUOTED_IDENTIFIER ON 
+
+declare @startdate as date, @enddate as date 
+
+set @startdate = '{}' 
+set @enddate = '{}' 
+
+set @enddate = DATEADD(d,1,@enddate); 
+
+select a.Id, 
+	cast(a.[Date] as date) as EventDate, 
+	ud.LastName + ', ' + isnull(ud.FirstName,'') + ' ' + isnull(ud.MiddleInitial,'') as UserName, 
+	a.HolderName as Patient_Identifier, 
+	p.RecordNumber, 
+	pe.LastName as PatientLastName, 
+	pe.FirstName as PatientFirstName 
+from Fwk_AuditLog (NOLOCK) a 
+left join Fwk_AuditLogClinicalMapping (NOLOCK) m on a.[Action] = m.AuditActionId 
+	join PatientChart (NOLOCK) pc on pc.Id = a.ObjectId 
+	join Patient (NOLOCK) p on pc.PatientId= p.Id 
+	join Person (NOLOCK) pe on p.Id = pe.Id 
+	left join Fwk_User u on a.UserId = u.Id 
+	left join Fwk_UserDetail ud on a.UserId = ud.Id 
+	left join Fwk_Role r on ud.RoleId = r.Id 
+	and u.[Type] = 0 and ud.Blocked = 0 and ud.LastName is not null 
+where a.[Action] = '44631B31-36AD-4C1B-9475-A8B24FD7AAB2' 
+and a.ClassName = 'Chart' 
+and (@startdate is null or a.[Date] >= @startdate) 
+and (@enddate is null or a.[Date] <= @enddate) 
+order by a.[Date] desc 
+""".format(start_of_week,today)
+
+file = open('C:/Users/appnet/Documents/SQL Project/Date Parameters.txt', 'w')
+file.write(query)
+file.close()
+
+driver_name = "SQL Server"
+server_name = 'DHP-GGASTRO-DB'
+db_name = "gGastroTest"
+
+connection_string = f"""
+    driver={{{driver_name}}};
+    server={server_name};
+    database={db_name};
+    trust_connection=yes;
+"""
+conn = odbc.connect(connection_string)
+conn.autocommit = True
+
+with open('C:/Users/appnet/Documents/SQL Project/Date Parameters.txt', 'r') as file:
+    query = file.read()
+
+cursor = conn.cursor()
+rows = cursor.execute(query)
+
+with open('%s' %file_name, 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    for row in rows:
+        writer.writerow(row)
+
+print(conn)
