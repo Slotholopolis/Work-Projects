@@ -13,8 +13,7 @@ month = today.strftime("%B")
 format_start = start_of_week.strftime('%m.%d.%y')
 format_end = today.strftime('%m.%d.%y')
 
-folder_path_y = pathlib.Path(f"C:/Users/appnet/Documents/SQL Project/{year}").mkdir(parents=True, exist_ok=True)
-folder_path_m = pathlib.Path(f"C:/Users/appnet/Documents/SQL Project/{year}/{month}").mkdir(parents=True, exist_ok=True)
+folder_path = pathlib.Path(f"C:/Users/appnet/Documents/SQL Project/{year}/{month}").mkdir(parents=True, exist_ok=True)
 file_name = f"C:/Users/appnet/Documents/SQL Project/{year}/{month}/{format_start} to {format_end} report.txt"
 
 query = """
