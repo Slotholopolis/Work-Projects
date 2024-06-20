@@ -1,0 +1,50 @@
+import pypyodbc as odbc
+import pyodbc
+import glob
+import os.path
+import time
+import shutil
+
+pyodbc.drivers()
+['SQL Server',
+ 'Microsoft Access Driver (*.mdb, *.accdb)',
+ 'Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)',
+ 'Microsoft Access Text Driver (*.txt, *.csv)',
+ 'PostgreSQL ANSI (x64)',
+ 'PostgreSQLUnicode (x64)',
+ 'Amazon Redshift (x64)',
+ 'SQL Server Native Client 11.0',
+ 'SQL Server Native Client RDA 11.0',
+ 'ODBC Driver 17 for SQL Server']
+
+folder_path = r'C:\LogShipping'
+file_type = r'\*bak'
+files = glob.glob(folder_path + file_type)
+max_file = max(files, key=os.path.getctime)
+
+print(max_file)
+
+driver_name = "SQL Server"
+server_name = "RBH-SQL\SQLEXPRESS"
+db_name = "RHTBuildRepl"
+
+connection_string = f"""
+    driver={{{driver_name}}};
+    server={server_name};
+    Database={db_name};
+    trust_connection=yes;
+"""
+
+conn = odbc.connect(connection_string)
+
+def execute(cmd):
+    cursor = conn.cursor()
+    cursor.execute("RESTORE DATABASE [RHTBuildRepl] FROM DISK = N'C:\LogShipping\RHTBuildRepl_db_20231024013100.bak' WITH REPLACE")
+    while (cursor.nextset()):
+        pass
+    cursor.close()
+
+
+
+print(conn)
+print(f"Restored {max_file} to the database.")
